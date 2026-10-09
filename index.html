@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sapo do Rio — Aventura 3D Online v26</title>
+<title>Sapo do Rio — Aventura 3D Online v27</title>
 <style>
   :root{
     --panel:rgba(18,10,28,.78);
@@ -147,12 +147,17 @@
   #bt b{display:block;font-size:34px;color:#fff;text-shadow:0 0 18px #f33,0 3px 8px #000}
   #bt.on{animation:btc 2.6s ease-out}
   @keyframes btc{0%{opacity:0;transform:scale(1.6)}12%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0;transform:scale(.96)}}
-  /* mensagens no meio da tela desativadas (atrapalhavam a jogabilidade) */
   #msg,#pop,#bt,#alert{display:none!important}
+  /* Novos efeitos visuais para UI */
+  .glow-pulse{animation:glowPulse 2s infinite}
+  @keyframes glowPulse{0%,100%{box-shadow:0 0 8px rgba(255,210,74,.4)}50%{box-shadow:0 0 24px rgba(255,210,74,.9)}}
+  .weather-icon{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
+    font-size:24px;pointer-events:none;opacity:0;transition:opacity 1s;z-index:7}
+  .weather-icon.on{opacity:.9}
 </style>
 </head>
 <body><div id="vg"></div>
-<div id="loading"><div class="spin"></div><div>Carregando Sapo do Rio v26…</div></div>
+<div id="loading"><div class="spin"></div><div>Carregando Sapo do Rio v27…</div></div>
 
 <div class="p" id="hp">
   <b>🐸 Nv <span id="lv">1</span></b> · <span id="pw">8</span>⚡
@@ -184,7 +189,7 @@
 <div id="msg"></div>
 <div id="pop"></div>
 <div id="combo"></div>
-<div id="sb"></div><div id="cf"></div><div id="rad"></div><div id="fl"></div><div id="bt"></div><div id="at"></div><input type="file" id="sf" accept=".json" style="display:none"><button id="cbtn">💬</button><button id="ptt" style="display:none">🎙️</button><div id="vz"></div>
+<div id="sb"></div><div id="cf"></div><div id="rad"></div><div id="fl"></div><div id="bt"></div><div id="at"></div><input type="file" id="sf" accept=".json" style="display:none"><button id="cbtn">💬</button><button id="ptt" style="display:none">🎙️</button><div id="vz"></div><div class="weather-icon" id="wi">☀️</div>
 
 <button id="bag">🎒 Bolsa</button><button id="mn">☰ Menu</button><button id="pot">🧪 0</button><div class="p" id="gd" style="display:none;left:50%;transform:translateX(-50%);bottom:calc(112px + env(safe-area-inset-bottom,0px));padding:4px 12px;font-size:13px">🪙 <b id="gold">0</b> · <small id="nxt"></small></div>
 <button id="inv">🔗 Convidar</button>
@@ -211,11 +216,11 @@
 </div>
 
 <div class="ov" id="ov">
-  <h1>🐸 Sapo do Rio <small style="font-size:14px;opacity:.7">v26</small></h1><p id="ovt" style="font-size:14px"></p>
+  <h1>🐸 Sapo do Rio <small style="font-size:14px;opacity:.7">v27</small></h1><p id="ovt" style="font-size:14px"></p>
   <p>Suba o rio, explore a terra, derrote monstros e chefes.<br>
   Pegue moscas 🪰, colete itens, complete missões e duelе outros sapos na arena online.</p>
   <p style="font-size:12px;opacity:.7">
-    ▲▼◀▶ / WASD andar · Espaço pular · Shift correr · Q 👅 · E 🫧 · R 📣 · F 💨 · G 💚 · H ⚡
+    ▲▼◀▶ / WASD andar · Espaço pular · Shift correr · Q 👅 · E 🫧 · R 📣 · F 💨 · G 💚 · H ⚡ · X habilidade da arma · M mapa
   </p>
   <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
     <button class="big" id="go">Jogar</button><button class="big alt" id="go0" style="display:none">🔄 Do início</button>
@@ -238,8 +243,9 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
 <script>
 /* =========================================================================
-   SAPO DO RIO — v26 (Artifact)
-   Gráficos aprimorados + Animações únicas de chefes + VFX de skills
+   SAPO DO RIO — v27 (Artifact)
+   Gráficos aprimorados + Clima dinâmico + Animações faciais + God rays
+   + Itens lendários únicos + Quests diárias + Som ambiente + Efeitos PvP
    ========================================================================= */
 const T=THREE;
 const $=id=>document.getElementById(id);
@@ -297,6 +303,16 @@ const MISSIONS=[
   {id:'k100', ic:'🗡️',name:'Chacina',           desc:'Derrote 100 inimigos',      target:100, stat:'kills',    reward:600}
 ];
 
+/* ---------- Quests Diárias ---------- */
+const DAILY_QUESTS=[
+  {id:'d_kill20',name:'Caçador Diário',desc:'Derrote 20 inimigos',target:20,stat:'kills',reward:150},
+  {id:'d_fly30',name:'Coletor de Moscas',desc:'Pegue 30 moscas',target:30,stat:'flies',reward:120},
+  {id:'d_dist500',name:'Explorador Diário',desc:'Percorra 500m',target:500,stat:'distance',reward:200},
+  {id:'d_boss1',name:'Caçador de Chefes',desc:'Derrote 1 chefe',target:1,stat:'bosses',reward:300},
+  {id:'d_gold500',name:'Minerador',desc:'Colete 500 de ouro',target:500,stat:'goldEarned',reward:180}
+];
+let dailyQuests=[];let dailyQuestDate='';
+
 /* ---------- Estado ---------- */
 let sv={lv:1,xp:0,fl:0,best:0,missions:{},stats:{},opt:{}};
 let inv=[]; let uid=1;
@@ -332,7 +348,7 @@ sun.shadow.radius=3;
 S.add(sun,sun.target);
 
 /* ---------- Post-processing ---------- */
-let composer=null,bloomPass=null,gradePass=null;
+let composer=null,bloomPass=null,gradePass=null,godRayPass=null;
 function initPost(){
   if(!T.EffectComposer||!T.UnrealBloomPass||sv.opt.q==='l')return;
   try{
@@ -451,13 +467,15 @@ function terr(zc,t){
       p[k]=x;p[k+1]=y;p[k+2]=z;
       tc.copy(gc).lerp(gd,Math.sin(x*.21)*Math.sin(z*.17)*.5+.5);
       if(a<15)tc.lerp(sand,Math.min(1,Math.max(0,1-(a-12.5)/2.5))*.8);
+      const snow=Math.max(0,(y-6)/4);if(snow>0)tc.lerp(new T.Color(0xffffff),Math.min(.9,snow));
+      if(a>12.5&&y<2&&Math.sin(x*.5)*Math.sin(z*.5)>.3)tc.lerp(new T.Color(0x2a5a2a),.3);
       tc.lerp(wh,Math.min(1,y/9)*.2);if(a>=PVP_D)tc.lerp(pvpC,.4);
       c[k]=tc.r;c[k+1]=tc.g;c[k+2]=tc.b;
     }
     for(let j=0;j<7;j++){
       const k=(i*7+j)*3;
       w[k]=cc+(j-3)/3*12.7;
-      w[k+1]=Math.sin(z*.9+t*1.8+j)*.07;
+      w[k+1]=Math.sin(z*.9+t*1.8+j)*.07+Math.sin(z*.3+t*.7)*.04;
       w[k+2]=z;
     }
   }
@@ -496,7 +514,6 @@ const wake=[];for(let i=0;i<8;i++){const m=new T.Mesh(new T.RingGeometry(.8,1,24
 const parts=new T.Points(pg,new T.PointsMaterial({map:dotTex,color:0xffffff,size:.75,transparent:true,opacity:.9,blending:T.AdditiveBlending,depthWrite:false}));
 parts.frustumCulled=false;S.add(parts);
 
-/* sombra de contato */
 const fxSoft=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.7)');g.addColorStop(.6,'rgba(255,255,255,.18)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new T.CanvasTexture(c)})();
 const contactShadow=new T.Mesh(new T.PlaneGeometry(2.6,2.6),new T.MeshBasicMaterial({map:fxSoft,color:0x000000,transparent:true,opacity:0.42,depthWrite:false}));
 contactShadow.rotation.x=-Math.PI/2;S.add(contactShadow);
@@ -518,7 +535,6 @@ const hRock=new T.Group(),HR={t:0,dir:0,x:0,z:0,mode:0};
  hRock.add(r1,r2,r3);hRock.traverse(o=>{o.castShadow=true})}
 hRock.visible=false;S.add(hRock);
 
-/* Estados de animação do sapo */
 frog.userData.cast=0;
 frog.userData.headStretch=0;
 frog.userData.inflate=0;
@@ -526,31 +542,96 @@ frog.userData.roar=0;
 frog.userData.dashTrail=0;
 frog.userData.heal=0;
 frog.userData.rage=0;
+frog.userData.blink=0;
+frog.userData.blinkTimer=rnd(2,6);
+frog.userData.eyes=null;
 
-/* ---------- Partículas ambientais ---------- */
+/* ---------- Sistema de Clima Dinâmico ---------- */
+const WEATHER={
+  current:'clear',intensity:0,targetIntensity:0,nextChange:Date.now()+60000,
+  rain:null,rainCount:800,lightningTimer:0,
+  init(){
+    const geo=new T.BufferGeometry();
+    const pos=new Float32Array(this.rainCount*3);
+    for(let i=0;i<this.rainCount;i++){pos[i*3]=rnd(-40,40);pos[i*3+1]=rnd(0,30);pos[i*3+2]=rnd(-50,20)}
+    geo.setAttribute('position',new T.BufferAttribute(pos,3));
+    this.rain=new T.Points(geo,new T.PointsMaterial({color:0xaaccff,size:0.15,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending}));
+    this.rain.frustumCulled=false;S.add(this.rain);
+  },
+  update(dt,now){
+    if(now>this.nextChange){
+      const roll=Math.random();
+      if(roll<0.12)this.current='storm';
+      else if(roll<0.30)this.current='rain';
+      else if(roll<0.40)this.current='fog';
+      else this.current='clear';
+      this.nextChange=now+rnd(60000,180000);
+    }
+    let target=0;
+    if(this.current==='rain')target=0.6;
+    else if(this.current==='storm')target=1.0;
+    else if(this.current==='fog')target=0.3;
+    this.intensity+=(target-this.intensity)*dt*0.5;
+    const baseFog=60+(1-this.intensity)*100;
+    S.fog.near=baseFog*(this.current==='fog'?0.3:1);
+    S.fog.far=230*(this.current==='fog'?0.4:1)*(1-this.intensity*0.4);
+    sun.intensity=0.92*(1-this.intensity*0.7);
+    if(this.rain){
+      this.rain.material.opacity=this.intensity*0.8;
+      if(this.intensity>0.05){
+        const arr=this.rain.geometry.attributes.position.array;
+        for(let i=0;i<this.rainCount;i++){
+          arr[i*3+1]-=dt*45*(0.5+this.intensity);
+          if(arr[i*3+1]<-2){arr[i*3+1]=30;arr[i*3]=frog.position.x+rnd(-40,40);arr[i*3+2]=st.z+rnd(-50,20)}
+        }
+        this.rain.geometry.attributes.position.needsUpdate=true;
+      }
+    }
+    if(this.current==='storm'&&this.intensity>0.5){
+      this.lightningTimer-=dt;
+      if(this.lightningTimer<=0){
+        this.lightningTimer=rnd(3,10);
+        const lx=frog.position.x+rnd(-60,60),lz=st.z+rnd(-80,20);
+        fxStrike(lx,gnY(lx,lz),lz,0xffffff,true);
+        flash('#ffffff',0.4);shake(0.3,0.4);
+      }
+    }
+    const wi=$('wi');
+    if(wi){
+      const icons={clear:'☀️',rain:'🌧️',storm:'⛈️',fog:'🌫️'};
+      wi.textContent=icons[this.current]||'☀️';
+      wi.classList.toggle('on',this.current!=='clear'||this.intensity>0.1);
+    }
+  }
+};
+WEATHER.init();
+
+/* ---------- Partículas ambientais por bioma ---------- */
 const AMB={p:null,type:-1};
 function ambSetup(zi_){
   if(AMB.type===zi_)return;
   AMB.type=zi_;
-  if(AMB.p){S.remove(AMB.p);AMB.p.geometry.dispose();AMB.p.material.dispose();}
-  const n=180,g=new T.BufferGeometry(),a=new Float32Array(n*3),v=[];
+  if(AMB.p){S.remove(AMB.p);AMB.p.geometry.dispose();AMB.p.material.dispose()}
+  const n=260,g=new T.BufferGeometry(),a=new Float32Array(n*3),v=[];
   const cfg={
     0:{c:0xffe0a0,s:0.5,v:[0.3,1.2,0.3]},
     1:{c:0xffc060,s:0.4,v:[0.8,-0.2,0.8]},
     2:{c:0xa0ff80,s:0.5,v:[0.5,0.8,0.5]},
     3:{c:0xf0d090,s:0.35,v:[2.5,-0.3,1.5]},
-    4:{c:0xff8030,s:0.6,v:[0.4,2.2,0.4]},
+    4:{c:0xff8030,s:0.7,v:[0.4,2.2,0.4]},
     5:{c:0xffffff,s:0.45,v:[0.4,-2.0,0.4]},
     6:{c:0x80ffd0,s:0.5,v:[0.2,0.6,0.2]},
     7:{c:0xffe0a0,s:0.4,v:[1.5,0.1,0.8]},
-    8:{c:0xc0a0ff,s:0.55,v:[0.3,0.4,0.3]},
+    8:{c:0xc0a0ff,s:0.6,v:[0.3,0.4,0.3]},
     9:{c:0xd0c0a0,s:0.4,v:[0.6,0.2,0.6]}
   };
   const cf=cfg[zi_]||cfg[0];
-  for(let i=0;i<n;i++){a[i*3]=rnd(-22,22);a[i*3+1]=rnd(0,14);a[i*3+2]=rnd(-30,8);
-    v.push([rnd(-cf.v[0],cf.v[0]),cf.v[1],rnd(-cf.v[2],cf.v[2])])}
+  for(let i=0;i<n;i++){
+    a[i*3]=rnd(-25,25);a[i*3+1]=rnd(0,18);a[i*3+2]=rnd(-35,10);
+    v.push([rnd(-cf.v[0],cf.v[0]),cf.v[1],rnd(-cf.v[2],cf.v[2])]);
+  }
   g.setAttribute('position',new T.BufferAttribute(a,3));
-  AMB.p=new T.Points(g,new T.PointsMaterial({color:cf.c,size:cf.s,map:dotTex,transparent:true,opacity:0.85,blending:T.AdditiveBlending,depthWrite:false,fog:false}));
+  AMB.p=new T.Points(g,new T.PointsMaterial({color:cf.c,size:cf.s,map:dotTex,transparent:true,opacity:0.9,blending:T.AdditiveBlending,depthWrite:false,fog:false}));
   AMB.p.frustumCulled=false;AMB.p.userData.v=v;S.add(AMB.p);
 }
 
@@ -565,7 +646,7 @@ const mkP=(x,y,z)=>({x,y,z,g:gnY(x,z)});
 const nq=n=>Math.max(1,Math.round(n*(HQ?1:.55)));
 
 /* ---------- Save ---------- */
-function save(){try{const s=JSON.stringify({v:4,sv,inv,uid});localStorage.setItem('sapo3',s);if(window.steamBridge&&steamBridge.saveWrite)steamBridge.saveWrite(s)}catch(e){}}
+function save(){try{const s=JSON.stringify({v:5,sv,inv,uid});localStorage.setItem('sapo3',s);if(window.steamBridge&&steamBridge.saveWrite)steamBridge.saveWrite(s)}catch(e){}}
 try{let raw=null;try{raw=window.steamBridge&&steamBridge.readSave?steamBridge.readSave():null}catch(e){}const d=JSON.parse(raw||localStorage.getItem('sapo3')||'null');if(d){sv=Object.assign(sv,d.sv||{});inv=d.inv||[];uid=d.uid||1}}
 catch(e){}
 if(!sv.stats)sv.stats={};if(!sv.missions)sv.missions={};if(!sv.opt)sv.opt={};
@@ -608,6 +689,18 @@ function drop(it,d,z){
   things.push({m:g,k:'l',d,z,it,by});
 }
 const say=t=>{$('msg').textContent=t;msgT=1.3};
+
+/* ---------- Itens Lendários Únicos ---------- */
+const LEGENDARY_ITEMS=[
+  {name:'Língua do Dragão Ancestral',slot:0,r:5,stats:{atk:150,crit:25,spd:10},act:{k:'meteor',ic:'☄️',n:'Meteoro Ancestral',m:8,r:20,cd:15,mods:['burn','shock']},ab:[{t:'lifesteal',v:15},{t:'burn',v:30},{t:'execute',v:40}]},
+  {name:'Coroa do Rei do Brejo',slot:1,r:5,stats:{hp:500,def:80,crit:15},ab:[{t:'regen',v:2},{t:'barrier',v:40},{t:'revive',v:50}]},
+  {name:'Botas do Vento Eterno',slot:2,r:5,stats:{spd:40,crit:20},ab:[{t:'dodge',v:25},{t:'haste',v:20}]},
+  {name:'Amuleto da Sorte Infinita',slot:3,r:5,stats:{hp:300,crit:20},ab:[{t:'luck',v:100},{t:'gold',v:50},{t:'xp',v:30}]}
+];
+function mkLegendaryItem(){
+  const base=LEGENDARY_ITEMS[Math.floor(Math.random()*LEGENDARY_ITEMS.length)];
+  return{u:uid++,s:base.slot,r:base.r,st:{...base.stats},n:base.name,ab:base.ab.map(a=>({t:a.t,v:a.v})),act:base.act?{...base.act}:undefined,p:0,legendary:true};
+}
 
 /* ---------- Geração procedural ---------- */
 const CHK=45,R0=Math.random;
@@ -726,7 +819,10 @@ pg:{hp:35,sp:4,dm:6,xp:6,r:1.5,n:'Pinguim',hh:1.8,land:1,type:'pg',mdl:[['s',0x2
 mm:{hp:450,sp:2.4,dm:28,xp:80,r:4.2,n:'Mamute',hh:4.5,land:1,slam:1,type:'mm',mdl:[['s',0x7a5a40,0,2,0,1.5,1.4,2],['s',0x7a5a40,0,2.4,-2.2,.9,.9,.9],['y',0x7a5a40,0,1.2,-3,.2,1.6],['k',0xf5f0e0,-.55,1.6,-2.9,.12,1.3,0,-Math.PI/2],['k',0xf5f0e0,.55,1.6,-2.9,.12,1.3,0,-Math.PI/2],...LG(4,0x5a4030,.9,-1,2,1.6,.4),...EY(2.6,-3,.4,.1,0x111111)]}
 });
 function mkMon(sp){const g=new T.Group();sp.mdl.forEach(p=>{const[sh,c,x,y,z,a,b,d]=p;const geo=sh==='s'?new T.SphereGeometry(1,10,8):sh==='b'?new T.BoxGeometry(a,b,d):sh==='k'?new T.ConeGeometry(a,b,6):new T.CylinderGeometry(a,a,b,6),m=new T.Mesh(geo,M(c));m.position.set(x,y,z);if(sh==='s')m.scale.set(a,b,d);if(p[8])m.rotation.x=p[8];if(p[9])m.rotation.z=p[9];g.add(m)});
-if(sp.slam){const r=new T.Mesh(new T.RingGeometry(.92,1,32),new T.MeshBasicMaterial({color:0xff4040,transparent:true,opacity:.7,side:2}));r.rotation.x=-Math.PI/2;r.position.y=.3;r.scale.setScalar(7.5);r.visible=false;g.add(r);g.userData.ring=r}return g}
+if(sp.slam){const r=new T.Mesh(new T.RingGeometry(.92,1,32),new T.MeshBasicMaterial({color:0xff4040,transparent:true,opacity:.7,side:2}));r.rotation.x=-Math.PI/2;r.position.y=.3;r.scale.setScalar(7.5);r.visible=false;g.add(r);g.userData.ring=r}
+const shadow=new T.Mesh(new T.PlaneGeometry(2.5,2.5),new T.MeshBasicMaterial({map:fxSoft,color:0x000000,transparent:true,opacity:0.35,depthWrite:false}));
+shadow.rotation.x=-Math.PI/2;shadow.position.y=.02;g.add(shadow);g.userData.shadow=shadow;
+return g}
 const WT=[['p','j','jv'],['p','j','en','jv'],['j','en','po','tb'],['j','tb','p'],['tb','b','po','kr'],['b','tb','po','kr'],['jv','en','po','j'],['j','tb','p'],['jv','po','kr','tb'],['j','en','po','kr']],LT=[['c','sl','ra','cg','a','v'],['lb','ur','v','a','mo','sl'],['gr','pl','a','c','mo','sl'],['es','cc','ra','g','sk','v'],['ld','g','sk','mo','es','ur'],['ye','lb','pg','ur','g','mm'],['sl','cg','a','sk','pl','gr'],['es','lb','v','ur','cc','g'],['sk','mo','g','ye','ld','pl'],['sk','g','mo','ur','ld','mm']],pickT=a=>a[Math.floor(Math.random()*Math.random()*a.length)];
 function mkEn(t){
   if(ET[t].mdl)return mkMon(ET[t]);
@@ -756,6 +852,8 @@ function mkEn(t){
     const r=new T.Mesh(new T.RingGeometry(.92,1,32),new T.MeshBasicMaterial({color:0xff4040,transparent:true,opacity:.7,side:2}));
     r.rotation.x=-Math.PI/2;r.position.y=.3;r.scale.setScalar(7.5);r.visible=false;g.add(r);g.userData.ring=r;
   }
+  const shadow=new T.Mesh(new T.PlaneGeometry(2.5,2.5),new T.MeshBasicMaterial({map:fxSoft,color:0x000000,transparent:true,opacity:0.35,depthWrite:false}));
+  shadow.rotation.x=-Math.PI/2;shadow.position.y=.02;g.add(shadow);g.userData.shadow=shadow;
   return g;
 }
 function spawnEn(t,d,z){
@@ -779,7 +877,7 @@ function dmgEn0(e,d,q){
   }
 }
 
-/* ---------- Habilidades (combo + aim-assist) ---------- */
+/* ---------- Habilidades ---------- */
 let combo=0,comboT=0,hitstop=0;
 function skill(k){
   if(!st.run||st.pause||cd[k]>0||sv.lv<SKL[k][0])return;
@@ -839,7 +937,7 @@ function skill(k){
   if(k==='v'){EN.forEach(e=>{if(Math.hypot(e.z-st.z,e.d-st.d)<24)dmgEn(e,120+P*1.5)});if(boss&&boss.hp>0)dmg(120+P*1.5);rip.userData.t=1;say('🌟 CATACLISMA!')}
 }
 
-/* ---------- Itens / Inventário ---------- */
+/* ---------- Inventário ---------- */
 sv.gold=sv.gold||0;sv.cap=sv.cap||24;sv.cons=sv.cons||{hp:2,cd:0,luck:0,tp:1};
 const CN={hp:['🧪','Poção de Vida','Cura 50% da vida',40],cd:['💙','Poção de Foco','Zera todas as recargas',60],luck:['🍀','Trevo da Sorte','2x sorte de drop por 2 min',120],tp:['📜','Pergaminho de Retorno','Volta ao início do rio',50]};
 const sn=(i,k)=>Math.round((i.st[k]||0)*(1+.12*(i.up||0))),ip=i=>Math.round(Object.keys(i.st).reduce((a,k)=>a+sn(i,k)*SW[k],0)+(i.ab?i.ab.length*(i.r+1)*3:0));
@@ -865,13 +963,14 @@ return'<div class="det" style="border-color:'+RC(i)+'"><b style="color:'+RC(i)+'
 (e?'<button class="x" data-a="uneq"'+u+'>Desequipar</button>':'<button data-a="eq"'+u+'>Equipar</button>')+
 '<button data-a="up"'+u+(up>=10?' disabled':'')+'>Melhorar '+(up>=10?'(máx)':'🪙'+upCost(i))+'</button><button data-a="lock"'+u+'>'+(i.lock?'🔓 Destrancar':'🔒 Trancar')+'</button><button class="x" data-a="sell"'+u+(e||i.lock?' disabled':'')+'>Vender 🪙'+price(i)+'</button></div>'}
 function renderBag(){cleanEq();const el=$('bgc'),P=pw();let h='<h2>🎒 Bolsa</h2><div style="display:flex;justify-content:space-between;font-size:14px"><span>🪙 <b>'+sv.gold+'</b></span><span>⚡ '+P+' · '+rank(P)+'</span><span>'+inv.length+'/'+sv.cap+'</span></div>'+(UI.note?'<div style="text-align:center;color:var(--gold);font-size:13px;margin-top:4px">'+esc(UI.note)+'</div>':'')+'<div class="tabs">';
-[['eq','🎽 Equipar'],['bag','🎒 Bolsa'],['cons','🧪 Itens'],['shop','🏪 Loja'],['arena','⚔️ Arena'],['miss','📋 Missões'],['cfg','⚙️ Config']].forEach(t=>h+='<button class="tab'+(UI.tab===t[0]?' on':'')+'" data-a="tab" data-t="'+t[0]+'">'+t[1]+'</button>');h+='</div>';
+[['eq','🎽 Equipar'],['bag','🎒 Bolsa'],['cons','🧪 Itens'],['shop','🏪 Loja'],['arena','⚔️ Arena'],['miss','📋 Missões'],['daily','📅 Diárias'],['cfg','⚙️ Config']].forEach(t=>h+='<button class="tab'+(UI.tab===t[0]?' on':'')+'" data-a="tab" data-t="'+t[0]+'">'+t[1]+'</button>');h+='</div>';
 const tb=UI.tab;
 if(tb==='eq'){h+='<div class="stat-grid">'+[['⭐ Nível',sv.lv],['🗡️ ATQ','+'+stat('atk')],['🛡️ DEF','+'+stat('def')],['❤️ VIDA',hpMax()],['💨 VEL',spdBase().toFixed(1)],['🎯 CRIT',stat('crit')+'%']].map(a=>'<div class="stat-item">'+a[0]+'<b>'+a[1]+'</b></div>').join('')+'</div><div class="grid" style="grid-template-columns:repeat(4,1fr)">'+SL.map((s,k)=>{const i=byU(sv.eq[k]);return i?cell(i):'<div class="slot" style="opacity:.4">'+s[0]+'</div>'}).join('')+'</div>'+(UI.sel?detH():'<small style="opacity:.7">Toque num item para ver detalhes.</small>')}
 else if(tb==='bag'){const list=inv.filter(i=>UI.flt<0||i.s===UI.flt).sort((a,b)=>b.r-a.r||ip(b)-ip(a));
 h+='<div class="tabs">'+['Todos','🗡️','🎩','👢','📿'].map((n,k)=>'<button class="tab'+(UI.flt===k-1?' on':'')+'" data-a="flt" data-f="'+(k-1)+'">'+n+'</button>').join('')+'</div><div class="grid">'+list.map(cell).join('')+Array(Math.max(0,sv.cap-inv.length)).fill('<div class="slot" style="opacity:.25"></div>').join('')+'</div>'+detH()+'<div class="row"><button data-a="bulk">🧹 Vender comuns e incomuns</button><button data-a="cap">➕ 6 espaços 🪙'+capCost()+'</button></div>'}
 else if(tb==='cons'){h+=Object.keys(CN).map(k=>'<div class="it"><span>'+CN[k][0]+' <b>'+CN[k][1]+'</b> ×'+sv.cons[k]+'<br><small>'+CN[k][2]+'</small></span><button data-a="use" data-k="'+k+'">Usar</button></div>').join('')+'<small style="opacity:.7">Atalho: Z usa Poção de Vida. Monstros dropam consumíveis.</small>'}
-else if(tb==='shop'){h+='<div style="opacity:.8;font-size:12px">🏪 Mercador do Brejo</div>'+Object.keys(CN).map(k=>'<div class="it"><span>'+CN[k][0]+' '+CN[k][1]+'<br><small>'+CN[k][2]+'</small></span><button data-a="buy" data-k="'+k+'">🪙'+CN[k][3]+'</button></div>').join('')+'<div class="it"><span>📦 <b>Baú Misterioso</b><br><small>Equipamento aleatório</small></span><button data-a="chest" data-c="0">🪙150</button></div><div class="it"><span>🎁 <b>Baú Épico</b><br><small>Épico ou melhor garantido</small></span><button data-a="chest" data-c="1">🪙700</button></div>'}
+else if(tb==='shop'){h+='<div style="opacity:.8;font-size:12px">🏪 Mercador do Brejo</div>'+Object.keys(CN).map(k=>'<div class="it"><span>'+CN[k][0]+' '+CN[k][1]+'<br><small>'+CN[k][2]+'</small></span><button data-a="buy" data-k="'+k+'">🪙'+CN[k][3]+'</button></div>').join('')+'<div class="it"><span>📦 <b>Baú Misterioso</b><br><small>Equipamento aleatório</small></span><button data-a="chest" data-c="0">🪙150</button></div><div class="it"><span>🎁 <b>Baú Épico</b><br><small>Épico ou melhor garantido</small></span><button data-a="chest" data-c="1">🪙700</button></div><div class="it"><span>🌟 <b>Baú Lendário</b><br><small>Item lendário único garantido!</small></span><button data-a="chest" data-c="2">🪙3000</button></div>'}
+else if(tb==='daily'){if(!dailyQuests.length)initDailyQuests();h+=renderDailyQuests();h+='<small style="opacity:.7">Renova todo dia à meia-noite.</small>'}
 else{h+='<div class="it"><span>🔊 Som</span><button data-a="snd">'+(sv.opt.snd?'Ligado':'Desligado')+'</button></div><div class="it"><span>🗑️ Apagar progresso</span><button class="x" data-a="rst">'+(UI.rst?'Confirmar?':'Apagar')+'</button></div><small style="opacity:.7">Salva sozinho neste aparelho. Atalhos: I bolsa · Z poção · Esc fechar.</small>'}
 el.innerHTML=h+'<button class="big" data-a="close" style="display:block;margin:16px auto">Voltar ao jogo</button>'}
 function openBag(t){st.pause=true;mode='bag';UI.tab=t||UI.tab;UI.sel=null;UI.note='';$('bg').style.display='flex';renderBag()}
@@ -890,8 +989,14 @@ else if(a==='bulk'){let g=0;inv=inv.filter(x=>{if(x.r<=1&&!x.lock&&!isEq(x)){g+=
 else if(a==='cap'){const c=capCost();if(sv.cap>=60)UI.note='Bolsa no máximo';else if(sv.gold<c)UI.note='Ouro insuficiente';else{sv.gold-=c;sv.cap+=6;sfx('buy')}}
 else if(a==='use')useCons(b.dataset.k);
 else if(a==='buy'){const k=b.dataset.k,c=CN[k][3];if(sv.gold<c)UI.note='Ouro insuficiente';else{sv.gold-=c;sv.cons[k]++;sfx('buy');UI.note='Comprado: '+CN[k][1]}}
-else if(a==='chest'){const x=+b.dataset.c,c=x?700:150;if(sv.gold<c)UI.note='Ouro insuficiente';else if(inv.length>=sv.cap)UI.note='Bolsa cheia!';else{sv.gold-=c;pick(mkItem(x?Math.max(3,roll(4)):roll(1.5)))}}
+else if(a==='chest'){const x=+b.dataset.c,c=x===2?3000:x?700:150;
+  if(sv.gold<c)UI.note='Ouro insuficiente';
+  else if(inv.length>=sv.cap)UI.note='Bolsa cheia!';
+  else{sv.gold-=c;
+    if(x===2){pick(mkLegendaryItem());UI.note='🌟 Item lendário obtido!'}
+    else pick(mkItem(x?Math.max(3,roll(4)):roll(1.5)))}}
 else if(a==='snd')sv.opt.snd=!sv.opt.snd;
+else if(a==='claimdaily')claimDailyQuest(b.dataset.q);
 else if(a==='rst'){if(UI.rst){try{localStorage.removeItem('sapo3')}catch(x){}location.reload()}else UI.rst=1}
 save();renderBag()};
 addEventListener('keydown',e=>{if(e.code==='KeyI'&&st.run&&!st.pause)openBag();else if(e.code==='Escape'){if($('bg').style.display==='flex')closeBag();else if($('mu').style.display==='flex')closeMenu();else if(st.run&&!st.pause)openMenu()}else if(e.code==='KeyZ'&&st.run&&!st.pause)useCons('hp')});
@@ -909,6 +1014,8 @@ function gain(n){
     for(const k in SKL)if(SKL[k][0]===sv.lv)say('🆕 '+SKL[k][1]+'!');
     sv.stats.level=sv.lv;checkMissions();
   }
+  updateDailyProgress('goldEarned',sv.gold);
+  updateDailyProgress('distance',Math.floor(-st.z));
   save();
 }
 function hit(d){
@@ -930,6 +1037,9 @@ function checkMissions(){
     const val=m.stat==='distance'?Math.floor(-st.z):(sv.stats[m.stat]||0);
     if(val>=m.target){sv.missions[m.id]='done';gain(m.reward/10)}
   });
+  updateDailyProgress('kills',sv.stats.kills||0);
+  updateDailyProgress('flies',sv.stats.flies||0);
+  updateDailyProgress('bosses',sv.stats.bosses||0);
   save();
 }
 function renderMissions(){
@@ -950,6 +1060,59 @@ function renderMissions(){
   h+='<button class="big" data-a="back" style="display:block;margin:16px auto">Voltar ao rio</button>';
   el.innerHTML=h;
 }
+
+/* ---------- Quests Diárias ---------- */
+function initDailyQuests(){
+  const today=new Date().toDateString();
+  if(sv.dailyQuestDate===today&&sv.dailyQuests){
+    dailyQuests=sv.dailyQuests;
+    dailyQuestDate=today;
+    return;
+  }
+  const shuffled=[...DAILY_QUESTS].sort(()=>Math.random()-0.5);
+  dailyQuests=shuffled.slice(0,3).map(q=>({...q,progress:0,claimed:false}));
+  sv.dailyQuestDate=today;
+  sv.dailyQuests=dailyQuests;
+  save();
+}
+function updateDailyProgress(stat,value){
+  if(!dailyQuests.length)initDailyQuests();
+  dailyQuests.forEach(q=>{
+    if(q.stat===stat&&!q.claimed){
+      q.progress=Math.max(q.progress,value);
+    }
+  });
+  sv.dailyQuests=dailyQuests;
+}
+function claimDailyQuest(qid){
+  const q=dailyQuests.find(x=>x.id===qid);
+  if(!q||q.claimed||q.progress<q.target)return;
+  q.claimed=true;
+  sv.gold+=q.reward;
+  gain(Math.floor(q.reward/5));
+  save();
+  say('✅ Quest completa! +🪙'+q.reward);
+  sfx('lvl');
+}
+function renderDailyQuests(){
+  if(!dailyQuests.length)initDailyQuests();
+  let h='<h3>📅 Quests Diárias</h3>';
+  dailyQuests.forEach(q=>{
+    const pct=Math.min(100,(q.progress/q.target)*100);
+    const done=q.progress>=q.target;
+    h+='<div class="mission '+(q.claimed?'done':'')+'">';
+    h+='<div class="ic">'+(q.claimed?'✅':'📅')+'</div>';
+    h+='<div class="body"><b>'+q.name+'</b><br><small>'+q.desc+'</small>';
+    h+='<div class="bar-mini"><i style="width:'+pct+'%"></i></div>';
+    h+='<small>'+Math.min(q.progress,q.target)+'/'+q.target+' · 🏆 +'+q.reward+'🪙</small>';
+    if(done&&!q.claimed){
+      h+='<button class="big" data-a="claimdaily" data-q="'+q.id+'" style="font-size:12px;padding:6px 12px;margin-top:4px">Resgatar</button>';
+    }
+    h+='</div></div>';
+  });
+  return h;
+}
+initDailyQuests();
 
 /* ---------- Multiplayer ---------- */
 let room=null,PEERS=[],ghosts={},D=null,CH=null,OUT=null,mode='river';
@@ -1262,7 +1425,6 @@ $('f').onpointerdown=()=>skill('f');
 $('g').onpointerdown=()=>skill('g');
 $('h').onpointerdown=()=>skill('h');$('t').onpointerdown=()=>skill('t');$('v').onpointerdown=()=>skill('v');$('w').onpointerdown=()=>skill('w');
 
-/* Câmera: arrastar o dedo na metade direita da tela gira a câmera */
 const CAMV={yaw:0,pitch:0,idle:0,drag:null};
 (()=>{
   const cv=R.domElement;
@@ -1284,7 +1446,6 @@ const CAMV={yaw:0,pitch:0,idle:0,drag:null};
   cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
 })();
 
-/* Joystick virtual */
 (()=>{
   const joy=$('joy'),knob=$('joyKnob');if(!joy)return;
   let active=false,cx0=0,cy0=0;
@@ -1312,9 +1473,7 @@ $('go').onclick=startGame;$('go0').onclick=()=>{FRESH=true;sv.cp=null;startGame(
 
 setInterval(()=>{if(st&&st.run)save()},8000);
 
-/* =========================================================================
-   VFX avançado — partículas GPU, relâmpagos reais, projéteis e impactos
-   ========================================================================= */
+/* ---------- VFX ---------- */
 function fxTex(draw){const c=document.createElement('canvas');c.width=c.height=128;draw(c.getContext('2d'));return new T.CanvasTexture(c)}
 const fxStar=fxTex(x=>{const g=x.createRadialGradient(64,64,0,64,64,36);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);x.globalCompositeOperation='lighter';
   [0,Math.PI/2,Math.PI/4,-Math.PI/4].forEach((a,i)=>{x.save();x.translate(64,64);x.rotate(a);const l=x.createLinearGradient(-64,0,64,0);l.addColorStop(0,'rgba(255,255,255,0)');l.addColorStop(.5,'rgba(255,255,255,'+(i<2?.95:.35)+')');l.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=l;x.fillRect(-64,-2.5,128,5);x.restore()})});
@@ -1447,7 +1606,7 @@ function fxStatus(dt,now){const p=frog.position;
     if(e.shT>0){e.shT-=dt;if(Math.random()<.5)pEmit(q.x+rnd(-.8,.8),q.y+rnd(0,hh),q.z+rnd(-.8,.8),rnd(-3,3),rnd(-2,3),rnd(-3,3),0xffffff,0xffe040,.35,.18,0,0,0,1)}}}
 function tongueHit(to,col){fxFlashSpr(fxStar,0xffffff,to.x,to.y,to.z,.5,2.8,.25,1);fxFlashSpr(fxSoft,col,to.x,to.y,to.z,.8,2.6,.25,.8);for(let i=0;i<nq(10);i++){const a=rnd(0,6.28),sp=rnd(2,5);pEmit(to.x,to.y,to.z,Math.cos(a)*sp,rnd(0,4),Math.sin(a)*sp,0xffffff,col,.4,.4,6,0,0,1)}}
 
-/* ---------- SKILLS VFX ---------- */
+/* ---------- VFX de skills ---------- */
 function healFx(){const p=frogP();fxRing(p.x,p.y,p.z,0x6aff8a,4,.8);fxRing(p.x,p.y,p.z,0xcfffd8,2.4,.6,.15);fxGlow(p.x,p.y-.4,p.z,0x6aff8a,3.5,.8,.6);fxLight(p.x,p.y+1,p.z,0x6aff8a,2.6,.7);
   for(let i=0;i<nq(22);i++)setTimeout(()=>{const q=frogP(),a=i*.62;[0,Math.PI].forEach(o=>pEmit(q.x+Math.cos(a+o)*1.1,q.y+.1,q.z+Math.sin(a+o)*1.1,0,rnd(3,4.5),0,0xe8ffe8,0x2ad65a,.75,.95,0,0,-.3,.95));
     if(i%3===0)pEmit(q.x+rnd(-.9,.9),q.y+.3,q.z+rnd(-.9,.9),0,rnd(1.5,3),0,0xffffff,0x9aff9a,1.1,1.1,0,0,-.4,.9)},i*36);
@@ -1559,23 +1718,12 @@ function vfxSkill(k){
 }
 function fxWaveV(x,y,z,col,Rr,life){const m=new T.Mesh(fxG2,addM(0,col,.8));m.position.set(x,y,z);m.rotation.x=-Math.PI/2;fxAdd(m,life,(f,k)=>{f.m.scale.setScalar(Rr*(.2+.8*Math.sqrt(k)));f.m.material.opacity=.8*(1-k)}).keep=1}
 
-/* ---------- Chefes: animações únicas por tipo ---------- */
+/* ---------- Chefes ---------- */
 let bossPrev=null,bossIntro=0,bossFlash=0,tel=null;
 const bossAnimState={lastHit:0,phase:'idle',windup:0,flap:0,rage:0,wing:0};
-
-function getBossKind(i){
-  if(i<5)return ['heron','croc','snake','scorpion','dragon'][i];
-  return ['titan','hydra','kraken','phoenix','colossus','leviathan'][(i-5)%6];
-}
+function getBossKind(i){if(i<5)return ['heron','croc','snake','scorpion','dragon'][i];return ['titan','hydra','kraken','phoenix','colossus','leviathan'][(i-5)%6]}
 function wingsOf(h,mat){
-  if(!h.userData.wings){
-    h.userData.wings=[-1,1].map(s=>{
-      const m=new T.Mesh(new T.BoxGeometry(2.4,.08,1.1),mat);
-      m.position.set(s*1.45,2.5,.1);
-      h.add(m);
-      return m;
-    });
-  }
+  if(!h.userData.wings){h.userData.wings=[-1,1].map(s=>{const m=new T.Mesh(new T.BoxGeometry(2.4,.08,1.1),mat);m.position.set(s*1.45,2.5,.1);h.add(m);return m})}
   const kind=boss?getBossKind(boss.i):'heron';
   const noWings=['croc','scorpion','titan','colossus','snake','hydra'].includes(kind);
   h.userData.wings.forEach(w=>w.visible=!noWings);
@@ -1644,7 +1792,7 @@ function rebuildBossBody(kind,color){
   }
 }
 function bossCastGlow(color,scale){
-  const p=heron.position, y=3*heron.scale.y;
+  const p=heron.position,y=3*heron.scale.y;
   fxFlashSpr(fxStar,color,p.x,y+2,p.z,2,8*scale,.5,1);
   fxFlashSpr(fxSoft,color,p.x,y+1,p.z,2,10*scale,.7,.7);
   fxRing(p.x,0,p.z,color,10*scale,.5);
@@ -1666,13 +1814,11 @@ function bossRoarWave(color,radius){
 }
 function bossBreathCone(origin,dir,color,len,spread){
   for(let i=0;i<32;i++){
-    const t=i/32, a=rnd(-spread,spread);
-    const x=origin.x+Math.sin(a)*t*len + dir.x*t*len;
-    const z=origin.z+Math.cos(a)*t*len + dir.z*t*len;
-    const y=origin.y+Math.sin(t*Math.PI)*2 - t*t*3;
-    pEmit(origin.x,origin.y,origin.z,
-      (x-origin.x)/.6,(y-origin.y)/.6,(z-origin.z)/.6,
-      color,color*0.4|0,.9+Math.random()*.8,1.2,2,1.4,.2);
+    const t=i/32,a=rnd(-spread,spread);
+    const x=origin.x+Math.sin(a)*t*len+dir.x*t*len;
+    const z=origin.z+Math.cos(a)*t*len+dir.z*t*len;
+    const y=origin.y+Math.sin(t*Math.PI)*2-t*t*3;
+    pEmit(origin.x,origin.y,origin.z,(x-origin.x)/.6,(y-origin.y)/.6,(z-origin.z)/.6,color,color*0.4|0,.9+Math.random()*.8,1.2,2,1.4,.2);
   }
 }
 function bossSlash(from,to,color,w){
@@ -1683,7 +1829,7 @@ function bossSlash(from,to,color,w){
 }
 function animHeron(dt,now,ph,wm,wg){
   const t=now/1000;
-  const flap=ph===2?11:ph===1?6:2.6, amp=ph===1?.9:.55;
+  const flap=ph===2?11:ph===1?6:2.6,amp=ph===1?.9:.55;
   wg[0].rotation.z=.35+Math.sin(t*flap)*amp;
   wg[1].rotation.z=-.35-Math.sin(t*flap)*amp;
   const wind=ph===1?Math.min(1,1-boss.t/1.7):0;
@@ -1805,15 +1951,15 @@ function animLeviathan(dt,now,ph,wm,wg){
   wg[1].rotation.z=-.3-Math.sin(t*6)*.5;
 }
 const BOSS_ANIM={
-  heron:animHeron, croc:animCroc, snake:animSnake, scorpion:animScorpion,
-  dragon:animDragon, titan:animTitan, hydra:animHydra, kraken:animKraken,
-  phoenix:animPhoenix, colossus:animColossus, leviathan:animLeviathan
+  heron:animHeron,croc:animCroc,snake:animSnake,scorpion:animScorpion,
+  dragon:animDragon,titan:animTitan,hydra:animHydra,kraken:animKraken,
+  phoenix:animPhoenix,colossus:animColossus,leviathan:animLeviathan
 };
 
 function bossAnim(dt,now){
   const t=now/1000;
   if(boss&&boss.hp>0){
-    const B=bossAt(boss.i), ph=boss.ph;
+    const B=bossAt(boss.i),ph=boss.ph;
     const kind=getBossKind(boss.i);
     if(bossPrev!==boss){
       bossPrev=boss;bossIntro=getBossKind(boss.i)==='heron'?0:1.4;boss.hp0=boss.hp;
@@ -1863,7 +2009,7 @@ function bossAnim(dt,now){
         const p=heron.position;
         pEmit(p.x+rnd(-1,1),3.5*heron.scale.y,p.z+rnd(-1,1),rnd(-1,1),rnd(-1,1),rnd(-1,1),col,0xffffff,.5,.3,0,0,0,1);
       }
-    } else if(boss._tel){
+    }else if(boss._tel){
       boss._tel.material.opacity*=.85;
       if(boss._tel.material.opacity<.02){S.remove(boss._tel);disp(boss._tel);boss._tel=null;}
     }
@@ -1873,44 +2019,44 @@ function bossAnim(dt,now){
       if(kind==='heron'){
         bossSlash({x:p.x,y:3.5*heron.scale.y,z:p.z},{x:frog.position.x,y:frog.position.y+1,z:frog.position.z},0xf0f0f0,1.2);
         fxRing(frog.position.x,0,frog.position.z,0xff3030,4,.4);
-      } else if(kind==='croc'){
+      }else if(kind==='croc'){
         bossRoarWave(0x4f7a2a,8);
         bossSlash({x:p.x,y:2,z:p.z},{x:frog.position.x,y:frog.position.y+1,z:frog.position.z},0x6a9a3a,1.4);
-      } else if(kind==='snake'){
+      }else if(kind==='snake'){
         bossBreathCone(v3(p.x,3,p.z),v3(0,0,-1),0x8aff5a,10,.4);
         fxDome(frog.position.x,.5,frog.position.z,0x6aff3a,6,.6,.4);
-      } else if(kind==='scorpion'){
+      }else if(kind==='scorpion'){
         const tgtX=frog.position.x,tgtZ=frog.position.z;
         skyStrike('shock',tgtX,gnY(tgtX,tgtZ),tgtZ);
         bossSlash({x:p.x,y:4,z:p.z},{x:tgtX,y:1,z:tgtZ},0xffd24a,.9);
-      } else if(kind==='dragon'){
+      }else if(kind==='dragon'){
         bossBreathCone(v3(p.x,3.5,p.z),v3(0,-.2,-1),0xff5a1a,14,.5);
         setTimeout(()=>{
           bossBreathCone(v3(p.x,3.5,p.z),v3(0,-.2,-1),0xff2a08,16,.7);
           fxDome(frog.position.x,1,frog.position.z,0xff5a1a,7,.7,.5);
         },400);
-      } else if(kind==='titan'){
+      }else if(kind==='titan'){
         bossRoarWave(0xffa030,14);
         const tgtX=frog.position.x,tgtZ=frog.position.z;
         fxRing(tgtX,0,tgtZ,0xffa030,10,.8);
         for(let i=0;i<30;i++){const a=rnd(0,6.28),sp=rnd(6,14);pEmit(tgtX,1,tgtZ,Math.cos(a)*sp,rnd(2,8),Math.sin(a)*sp,0xffd24a,0xff6020,1.2,1,4,1.4,.2)}
-      } else if(kind==='hydra'){
+      }else if(kind==='hydra'){
         for(let i=0;i<3;i++)setTimeout(()=>{
           bossBreathCone(v3(p.x+(i-1)*1.5,3.5,p.z),v3(0,-.3,-1),0x8aff3a,10,.4);
         },i*200);
-      } else if(kind==='kraken'){
+      }else if(kind==='kraken'){
         bossRoarWave(0x2a2a5a,12);
         for(let i=0;i<24;i++){const a=rnd(0,6.28),sp=rnd(4,10);pEmit(p.x,1,p.z,Math.cos(a)*sp,rnd(0,4),Math.sin(a)*sp,0x202040,0x000000,1.6,1.2,-1,1,.2,.9)}
-      } else if(kind==='phoenix'){
+      }else if(kind==='phoenix'){
         bossRoarWave(0xff5a1a,16);
         setTimeout(()=>{
           for(let i=0;i<40;i++){const a=rnd(0,6.28),sp=rnd(8,18);pEmit(p.x,2,p.z,Math.cos(a)*sp,rnd(2,10),Math.sin(a)*sp,0xffe060,0xff2a08,1.6,1.2,-1,1.5,.3,1)}
           flash('#ff5020',.3);
         },300);
-      } else if(kind==='colossus'){
+      }else if(kind==='colossus'){
         bossRoarWave(0x8ac8f0,14);
         fxCrystals(frog.position.x,gnY(frog.position.x,frog.position.z),frog.position.z,1.8);
-      } else if(kind==='leviathan'){
+      }else if(kind==='leviathan'){
         bossRoarWave(0x4fa8ff,18);
         for(let i=0;i<3;i++)setTimeout(()=>{
           const tx=frog.position.x+rnd(-6,6),tz=frog.position.z+rnd(-3,3);
@@ -1920,7 +2066,7 @@ function bossAnim(dt,now){
       snd(120,40,.7,'sawtooth',.1);
     }
     if(ph!==2)boss._atk=0;
-  } else {
+  }else{
     bossPrev=null;
     if(boss&&boss._tel){S.remove(boss._tel);disp(boss._tel);boss._tel=null;}
     heron.visible=false;if(heron.userData.extra)heron.userData.extra.visible=false;
@@ -1953,7 +2099,7 @@ function bossAnim(dt,now){
     tel.scale.setScalar(1.4+(1-pr)*5);
     tel.material.opacity=.3+.6*pr;
     tel.material.color.setHex(pr>.8?0xffffff:0xff3030);
-  } else if(tel)tel.visible=false;
+  }else if(tel)tel.visible=false;
   for(const e of EN){
     if(e.dead)continue;
     if(e.sp>0)e.m.rotation.z=Math.sin(now/170+e.d)*.07;
@@ -1992,11 +2138,71 @@ function tongueAnim(){
 }
 function titleCard(sub,name){const e=$('bt');e.innerHTML='<small>'+sub+'</small><b>'+esc(name)+'</b>';e.classList.remove('on');void e.offsetWidth;e.classList.add('on')}
 
+/* ---------- Animações faciais do sapo ---------- */
+function updateFrogFace(dt,now){
+  const t=now/1000;
+  const ud=frog.userData;
+  let targetEye=null,minDist=15;
+  for(const e of EN){
+    if(e.dead)continue;
+    const d=Math.hypot(e.z-st.z,e.d-st.d);
+    if(d<minDist){minDist=d;targetEye=e}
+  }
+  if(boss&&boss.hp>0)targetEye={m:heron};
+  if(!ud.eyes||ud.eyes.length===0){
+    ud.eyes=[];
+    frog.traverse(o=>{
+      if(o.geometry&&o.geometry.type==='SphereGeometry'&&o.material.color.getHex()===0x111111){
+        ud.eyes.push(o);
+      }
+    });
+  }
+  ud.eyes.forEach(eye=>{
+    if(targetEye&&targetEye.m){
+      const dx=targetEye.m.position.x-frog.position.x;
+      const dz=targetEye.m.position.z-frog.position.z;
+      const angle=Math.atan2(dx,-dz);
+      eye.position.x=Math.cos(angle)*0.04;
+      eye.position.z=Math.sin(angle)*0.04-0.14;
+    }else{
+      eye.position.x*=0.9;
+      eye.position.z=-0.14+(eye.position.z+0.14)*0.9;
+    }
+  });
+  if(!ud.blinkTimer)ud.blinkTimer=rnd(2,6);
+  ud.blinkTimer-=dt;
+  if(ud.blinkTimer<=0){ud.blinkTimer=rnd(2,6);ud.blink=0.12}
+  if(ud.blink>0){
+    ud.blink-=dt;
+    const s=ud.blink>0.06?0.1:1;
+    frog.traverse(o=>{
+      if(o.geometry&&o.geometry.type==='SphereGeometry'&&o.material.color.getHex()===0xffffff){o.scale.y=s}
+    });
+  }else{
+    frog.traverse(o=>{
+      if(o.geometry&&o.geometry.type==='SphereGeometry'&&o.material.color.getHex()===0xffffff){o.scale.y=1}
+    });
+  }
+  const breath=Math.sin(t*2)*0.02;
+  if(frog.userData.b){
+    frog.userData.b.scale.x=1.1+breath;
+    frog.userData.b.scale.z=1.15+breath;
+  }
+}
+
 /* ---------- Tick ---------- */
 let last=performance.now();
 reset();st.run=false;
 let vfxLast=performance.now();
-(function vfxLoop(now){requestAnimationFrame(vfxLoop);const dt=Math.min((now-vfxLast)/1000,.05);vfxLast=now;if(!st)return;try{tongueAnim()}catch(e){}fxTick(dt);psTick(dt);bossAnim(dt,now)})(performance.now());
+(function vfxLoop(now){
+  requestAnimationFrame(vfxLoop);
+  const dt=Math.min((now-vfxLast)/1000,.05);
+  vfxLast=now;
+  if(!st)return;
+  try{tongueAnim()}catch(e){}
+  fxTick(dt);psTick(dt);bossAnim(dt,now);
+  if(st.run&&!st.pause)updateFrogFace(dt,now);
+})(performance.now());
 
 const _skill0=skill;
 skill=function(k){const b=cd[k];_skill0(k);if(!(b>0)&&cd[k]>0)vfxSkill(k)};
@@ -2009,7 +2215,7 @@ dmgEn=function(e,d,q){const was=e.dead;_dmgEn1(e,d,q);if(was)return;const p=e.m.
   if(!q){e.fl=.14;fxBurst(p.x,p.y+e.hh*.5,p.z,0xffffff,6,3.5,.3)}
   if(e.dead){const c=(e.m.children[0]&&e.m.children[0].material&&e.m.children[0].material.color)?e.m.children[0].material.color.getHex():0xffffff;fxBurst(p.x,p.y+e.hh*.4,p.z,c,30,7,.9,true);fxRing(p.x,p.y,p.z,0xffffff,4+e.hh,.5);snd(300,80,.25,'square',.05)}};
 const _dmgB=dmg;
-dmg=function(d){const was=boss,p=heron.position.clone(),sc=heron.scale.y;_dmgB(d);if(!was)return;bossFlash=.12;fxBurst(p.x,p.y+3*sc,p.z+1.5,0xffe0a0,8,4,.35);if(!boss)bossDeathFx(p,sc)};
+dmg=function(d){const was=boss,p=heron.position.clone(),sc=heron.scale.y;_dmgB(d);if(!was)return;bossFlash=.12;fxBurst(p.x,p.y+3*sc,p.z+1.5,0xffe0a0,8,4,.35);if(!boss){bossDeathFx(p,sc);if(Math.random()<0.08){const leg=mkLegendaryItem();drop(leg,0,st.z-5);say('🌟 ITEM LENDÁRIO DROPADO!');flash('#ffd24a',0.4)}}};
 function bossDeathFx(p,sc){shake(1,1.2);flash('#ffffff',.6);[0,.2,.4,.6].forEach((d,i)=>fxRing(p.x,0,p.z,i%2?0xffd24a:0xff6a3a,16+i*4,1,d));fxPillar(p.x,0,p.z,0xfff0a0,45,3,1.4);fxOrb(p.x,3*sc,p.z,0xffffff,8*sc,.9);
   for(let i=0;i<4;i++)setTimeout(()=>fxBurst(p.x+rnd(-3,3),2+rnd(0,4),p.z+rnd(-3,3),[0xffd24a,0xff6a3a,0xffffff][i%3],40,12,1.2,true),i*180);snd(110,30,1.4,'sawtooth',.16)}
 
@@ -2232,19 +2438,19 @@ function tick(now){
   if(popT>0){popT-=dt;if(popT<=0)$('pop').style.display='none'}
   if(msgT>0){msgT-=dt;if(msgT<=0)$('msg').textContent=''}
   ambSetup(zi);
+  WEATHER.update(dt,now);
   if(AMB.p){
     const A=AMB.p.geometry.attributes.position.array,V=AMB.p.userData.v;
     for(let i=0;i<V.length;i++){
       A[i*3]+=V[i][0]*dt;A[i*3+1]+=V[i][1]*dt;A[i*3+2]+=V[i][2]*dt;
-      if(A[i*3+1]<-1){A[i*3+1]=14;A[i*3]=rnd(-22,22);A[i*3+2]=rnd(-30,8)}
-      if(A[i*3+1]>15){A[i*3+1]=0}
-      if(A[i*3]>25)A[i*3]=-25;if(A[i*3]<-25)A[i*3]=25;
-      if(A[i*3+2]>12)A[i*3+2]=-32;if(A[i*3+2]<-32)A[i*3+2]=12;
+      if(A[i*3+1]<-1){A[i*3+1]=18;A[i*3]=rnd(-25,25);A[i*3+2]=rnd(-35,10)}
+      if(A[i*3+1]>19){A[i*3+1]=0}
+      if(A[i*3]>28)A[i*3]=-28;if(A[i*3]<-28)A[i*3]=28;
+      if(A[i*3+2]>14)A[i*3+2]=-38;if(A[i*3+2]<-38)A[i*3+2]=14;
     }
     AMB.p.geometry.attributes.position.needsUpdate=true;
     AMB.p.position.set(frog.position.x,st.gy,frog.position.z);
   }
-  /* Animações do sapo */
   {
     const ud=frog.userData;
     const decay=(k,sp)=>{if(ud[k]>0)ud[k]=Math.max(0,ud[k]-dt*sp);};
@@ -2320,6 +2526,13 @@ function enemies(dt,now){
     e.m.position.set(cx(e.z)+e.d,gy+(e.fly?2.2:0)+Math.sin(now/300+i)*.08,e.z);
     if(!(e.slam&&e.ph===1))e.m.rotation.y=Math.atan2(-dd,-dz);
     e.m.scale.lerp(ONE,.2);
+    if(e.m.userData.shadow){
+      const groundY=gy;
+      e.m.userData.shadow.position.y=groundY-e.m.position.y+.05;
+      const airH=e.m.position.y-groundY;
+      e.m.userData.shadow.scale.setScalar(Math.max(0.3,1-airH*0.15));
+      e.m.userData.shadow.material.opacity=Math.max(0.05,0.35-airH*0.05);
+    }
     e.bar.position.set(e.m.position.x,e.m.position.y+e.hh,e.m.position.z);
     e.bar.scale.x=Math.max(.02,e.hp/e.mx*2);
   }
@@ -2367,10 +2580,11 @@ const rw=setInterval(()=>{if(room){clearInterval(rw);room.on('chat',m=>{if(m.isM
 function openMenu(p){if(!st)return;MU.page=p||'main';MU.conf=0;if(st.run)st.pause=true;mode='bag';$('mu').style.display='flex';renderMenu()}
 function closeMenu(){$('mu').style.display='none';if(st.run)st.pause=false;mode='river'}
 function renderMenu(){if(MU.page==='chat'){MU.unread=0;$('cbtn').textContent='💬'}const el=$('muc'),o=sv.opt,B=(a,t,x)=>'<button class="big alt" style="display:block;width:100%;margin:6px 0" data-a="'+a+'"'+(x||'')+'>'+t+'</button>',back=B('pg','⬅️ Voltar',' data-p="main"');let h='';
-if(MU.page==='main')h='<h2>☰ Menu</h2>'+B('resume','▶️ Continuar')+B('bag','🎒 Bolsa e equipamentos')+B('miss','📋 Missões')+B('pg','🏆 Ranking e recordes',' data-p="rank"')+B('pg','💬 Chat',' data-p="chat"')+B('pg','🎙️ Voz',' data-p="voice"')+B('pg','👥 Jogadores',' data-p="players"')+B('pg','🗺️ Mapa do mundo',' data-p="map"')+B('pg','✏️ Renomear sapo / Configurações',' data-p="cfg"')+B('pg','🏅 Conquistas',' data-p="ach"')+B('inv','🔗 Convidar amigos')+B('hq','🖥️ Gráficos HD: '+(HQ?'ligado':'desligado'))+B('snd','🔊 Som: '+(o.snd?'ligado':'desligado'))+B('mus','🎵 Música: '+(o.mus===false?'desligada':'ligada'))+B('vib','📳 Vibração: '+(o.vib===false?'desligada':'ligada'))+B('pg','❓ Como jogar',' data-p="help"')+B('again',MU.conf?'⚠️ Toque de novo para recomeçar do zero':'🔄 Recomeçar do início');
-else if(MU.page==='help')h='<h2>❓ Como jogar</h2><div style="text-align:left;font-size:14px;line-height:1.55">🐸 <b>Andar:</b> ▲▼◀▶ (ou WASD). Você pode sair do rio para a terra.<br>⤴️ <b>Pular:</b> botão PULAR / Espaço — desvia de pedras, mordidas e ataques com círculo vermelho.<br>⚡ <b>Correr:</b> Shift esquerdo/direito (consome stamina).<br>👅 <b>Língua (Q):</b> seu ataque inicial com auto-mira no inimigo mais próximo.<br>🔥 <b>Combo:</b> acertos consecutivos (até x20) aumentam o dano.<br>🪰 Pegue moscas para XP e ouro. Monstros dropam cristais coloridos: nade até eles para pegar.<br>💀 <b>Chefes:</b> um no fim de cada bioma e um <b>chefe mundial a cada 2000 m</b>.<br>🎒 <b>Bolsa:</b> equipe, melhore, venda itens e use poções. Loja com baús.<br>⚔️ <b>Arena:</b> desafie outros jogadores apostando itens.<br>⚰️ Ao cair, você volta ao último chefe derrotado e perde 10% do ouro.<br>🎁 Entre todo dia para ganhar a recompensa diária.<br>🤝 <b>Troca:</b> ☰ Menu → Jogadores → Trocar (as duas pessoas confirmam).<br>🗺️ <b>Mapa (M):</b> baús em ilhas e ruínas, totens a cada 500 m para viagem rápida.<br>⚔️ <b>Zona PvP (nível 100):</b> nas terras vermelhas, longe do rio, jogadores nível 100 podem se atacar. Quem perde entrega 1 item ao vencedor!<br>🔴 Matar sem o outro revidar deixa seu nome <b>vermelho</b> por 1 min: se você morrer assim, pode dropar itens raros. 🟣 Se o outro revidar, os dois ficam <b>roxos</b> e só vale a kill de quem matar.<br>✦ Itens raros+ têm habilidades únicas; armas raras têm uma habilidade ativa (tecla X).</div>'+back;
+if(MU.page==='main')h='<h2>☰ Menu</h2>'+B('resume','▶️ Continuar')+B('bag','🎒 Bolsa e equipamentos')+B('miss','📋 Missões')+B('pg','📅 Quests Diárias',' data-p="daily"')+B('pg','🏆 Ranking e recordes',' data-p="rank"')+B('pg','💬 Chat',' data-p="chat"')+B('pg','🎙️ Voz',' data-p="voice"')+B('pg','👥 Jogadores',' data-p="players"')+B('pg','🗺️ Mapa do mundo',' data-p="map"')+B('pg','✏️ Renomear sapo / Configurações',' data-p="cfg"')+B('pg','🏅 Conquistas',' data-p="ach"')+B('inv','🔗 Convidar amigos')+B('hq','🖥️ Gráficos HD: '+(HQ?'ligado':'desligado'))+B('snd','🔊 Som: '+(o.snd?'ligado':'desligado'))+B('mus','🎵 Música: '+(o.mus===false?'desligada':'ligada'))+B('vib','📳 Vibração: '+(o.vib===false?'desligada':'ligada'))+B('pg','❓ Como jogar',' data-p="help"')+B('again',MU.conf?'⚠️ Toque de novo para recomeçar do zero':'🔄 Recomeçar do início');
+else if(MU.page==='help')h='<h2>❓ Como jogar</h2><div style="text-align:left;font-size:14px;line-height:1.55">🐸 <b>Andar:</b> ▲▼◀▶ (ou WASD). Você pode sair do rio para a terra.<br>⤴️ <b>Pular:</b> botão PULAR / Espaço — desvia de pedras, mordidas e ataques com círculo vermelho.<br>⚡ <b>Correr:</b> Shift esquerdo/direito (consome stamina).<br>👅 <b>Língua (Q):</b> seu ataque inicial com auto-mira no inimigo mais próximo.<br>🔥 <b>Combo:</b> acertos consecutivos (até x20) aumentam o dano.<br>🪰 Pegue moscas para XP e ouro. Monstros dropam cristais coloridos: nade até eles para pegar.<br>💀 <b>Chefes:</b> um no fim de cada bioma e um <b>chefe mundial a cada 2000 m</b>.<br>🎒 <b>Bolsa:</b> equipe, melhore, venda itens e use poções. Loja com baús (incluindo lendário!).<br>⚔️ <b>Arena:</b> desafie outros jogadores apostando itens.<br>⚰️ Ao cair, você volta ao último chefe derrotado e perde 10% do ouro.<br>🎁 Entre todo dia para ganhar a recompensa diária.<br>📅 <b>Quests Diárias:</b> 3 missões renovadas todo dia com recompensas.<br>🌧️ <b>Clima:</b> chuva, tempestade e neblina mudam o ambiente.<br>🤝 <b>Troca:</b> ☰ Menu → Jogadores → Trocar (as duas pessoas confirmam).<br>🗺️ <b>Mapa (M):</b> baús em ilhas e ruínas, totens a cada 500 m para viagem rápida.<br>⚔️ <b>Zona PvP (nível 100):</b> nas terras vermelhas, longe do rio, jogadores nível 100 podem se atacar. Quem perde entrega 1 item ao vencedor!<br>🔴 Matar sem o outro revidar deixa seu nome <b>vermelho</b> por 1 min: se você morrer assim, pode dropar itens raros. 🟣 Se o outro revidar, os dois ficam <b>roxos</b> e só vale a kill de quem matar.<br>✦ Itens raros+ têm habilidades únicas; armas raras têm uma habilidade ativa (tecla X).<br>🌟 <b>Lendários:</b> 4 itens únicos podem dropar de chefes ou no Baú Lendário!</div>'+back;
 else if(MU.page==='rank'){const rows=[{n:myName+' (você)',lv:sv.lv,p:pw(),d:Math.floor(-st.z)}].concat(PEERS.filter(p=>!p.isMe&&p.presence&&p.presence.name).map(p=>({n:esc(String(p.presence.name).slice(0,16)),lv:pn(p.presence.lv),p:pn(p.presence.power),d:pn(p.presence.dist)}))).sort((a,b)=>b.p-a.p).slice(0,15);
 h='<h2>🏆 Ranking</h2><div style="font-size:13px;opacity:.85">Recorde: <b>'+(sv.best||0)+' m</b> · Nível '+sv.lv+' · ⚡'+pw()+' · 🪙'+sv.gold+'</div><div style="margin-top:8px">'+rows.map((r,i)=>'<div class="it"><span>'+(i+1)+'. '+r.n+'</span><b>Nv'+r.lv+' · ⚡'+r.p+' · '+r.d+'m</b></div>').join('')+'</div>'+killRank()+(room?'':'<small style="opacity:.7">Offline: só você aparece.</small>')+back}
+else if(MU.page==='daily'){if(!dailyQuests.length)initDailyQuests();h='<h2>📅 Quests Diárias</h2>'+renderDailyQuests()+back}
 else h=extraPage(B,back);
 el.innerHTML=h;chatList();if(MU.page==='map')drawMap();const ci=$('ci');if(ci)ci.onkeydown=e=>{if(e.key==='Enter'){sendChat(ci.value);ci.value=''}}}
 $('mu').onclick=e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;
@@ -2385,6 +2599,7 @@ else if(a==='vib'){sv.opt.vib=sv.opt.vib===false;renderMenu()}
 else if(a==='pg'){MU.page=b.dataset.p;renderMenu()}
 else if(a==='send'){const i=$('ci');sendChat(i.value);i.value=''}
 else if(a==='emo')sendChat(b.dataset.t);
+else if(a==='claimdaily'){claimDailyQuest(b.dataset.q);renderMenu()}
 else if(a==='again'){if(MU.conf){FRESH=true;sv.cp=null;closeMenu();reset()}else{MU.conf=1;renderMenu()}}
 save()};
 $('mn').onclick=()=>{if(st.run)openMenu('main')};
@@ -2394,7 +2609,6 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){save();if(
 startLabels();
 
 /* ===== Chefe mundial cooperativo ===== */
-
 const RN=['Dragão Ancestral','Hidra do Pântano','Titã do Trovão','Leviatã Furioso','Fênix Sombria'],IH=()=>!!(room&&room.isHost&&room.isHost());
 function tongueTo(tx,tz,w){const fx=frog.position.x,L=Math.hypot(tx-fx,tz-st.z);tongue.position.set((tx+fx)/2,st.gy+.8,(tz+st.z)/2);tongue.scale.z=L;tongue.lookAt(tx,st.gy+1.5,tz);tongue.visible=true;tongue.userData.t=.12;tongue.material.color.set(w?RAR[w.r][1]:'#ff6f9c')}
 function raidHit(d){if(!raid||!raidM||!(d>0))return;raidAcc+=d;ftext(raidM.position.x,raidM.position.y+4,raidM.position.z,Math.round(d),'#ffd24a');raidM.scale.setScalar(1.08)}
@@ -2630,7 +2844,7 @@ setInterval(()=>{if(!TR)return;const n=Date.now();
   if(TR.phase==='trade'&&TR.my.ready&&TR.their.ready&&!TR._r&&n-TR.chg>=3000)trRender()},500);
 
 /* ===== Steam / Extras ===== */
-const VERSION='0.26.0';
+const VERSION='0.27.0';
 sv.ach=sv.ach||{};
 const ACH=[
  ['first_blood','Primeiro Sangue','Derrote seu primeiro monstro',()=>(sv.tk||0)>=1],
@@ -2662,7 +2876,9 @@ const ACH=[
  ['pvp25','Duelista','Vença 25 jogadores',()=>sv.pk.k>=25],
  ['pk','Pária','Mate alguém sem provocação',()=>sv.pk.rk>=1],
  ['daily7','Fiel ao Rio','7 dias seguidos de recompensa diária',()=>(sv.streak||0)>=7],
- ['phoenix','Renascido','Renasça com uma habilidade de item',()=>!!sv.rev]
+ ['phoenix','Renascido','Renasça com uma habilidade de item',()=>!!sv.rev],
+ ['weather','Filho da Tempestade','Sobreviva a uma tempestade',()=>WEATHER.current==='storm'&&WEATHER.intensity>0.5],
+ ['legendary_item','Colecionador de Lendas','Obtenha um item lendário único',()=>inv.some(i=>i.legendary)]
 ];
 function unlockAch(a){sv.ach[a[0]]=Date.now();save();try{if(window.steamBridge&&steamBridge.unlock)steamBridge.unlock(a[0].toUpperCase())}catch(e){}
   const t=$('at');t.innerHTML='🏅 <b>Conquista!</b><br>'+esc(a[1])+'<br><small>'+esc(a[2])+'</small>';t.style.display='block';sfx('lvl');setTimeout(()=>{t.style.display='none'},4000)}
@@ -2681,7 +2897,7 @@ let fpsN=0,fpsT=performance.now(),lowC=0;
   if(st&&st.run&&!st.pause&&sv.opt.auto!==false&&!document.hidden){if(fps<28){if(++lowC>=2){lowC=0;const q=sv.opt.q||'h';if(q!=='l'){setQ(q==='h'?'m':'l');say('⚡ Qualidade reduzida para manter a fluidez')}}}else lowC=0}}})(performance.now());
 function applyUI(){const z=sv.opt.ui||1;document.querySelectorAll('.p,#ctl,#bag,#mn,#pot,#cbtn,#ptt').forEach(e=>{e.style.zoom=z})}
 applyUI();
-function exportSave(){const blob=new Blob([JSON.stringify({v:4,sv,inv,uid})],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sapo-do-rio-save.json';document.body.appendChild(a);a.click();a.remove()}
+function exportSave(){const blob=new Blob([JSON.stringify({v:5,sv,inv,uid})],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sapo-do-rio-save.json';document.body.appendChild(a);a.click();a.remove()}
 $('sf').onchange=e=>{const f=e.target.files[0];if(!f||f.size>2e6)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.sv||!Array.isArray(d.inv)||typeof d.sv.lv!=='number')throw 0;const s=JSON.stringify(d);localStorage.setItem('sapo3',s);if(window.steamBridge&&steamBridge.saveWrite)steamBridge.saveWrite(s);location.reload()}catch(x){say('Arquivo de save inválido')}};r.readAsText(f)};
 window.addEventListener('error',e=>{try{save()}catch(_){}try{console.error(e.message)}catch(_){}});
 function extraPage2(B,back){const o=sv.opt,sl=(k,l,v,mn,mx)=>'<div class="it"><span>'+l+'</span><input type="range" min="'+(mn||0)+'" max="'+(mx||1)+'" step=".05" value="'+v+'" data-k="'+k+'" style="width:50%"></div>';
